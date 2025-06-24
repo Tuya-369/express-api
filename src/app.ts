@@ -1,53 +1,58 @@
-import express from "express";
+import express, { Request, Response } from "express";
+import userRouter from "./user/user";
 import { Db, MongoClient } from "mongodb";
+import "dotenv/config";
+import todoRouter from "./todo/todo";
 
 const app = express();
+const port = 4201;
+
 app.use(express.json());
 
-let db: Db;
+export let db: Db;
 
-const url = "mongodb+srv://Tuya:Tuyanaa1216@cluster0.0kjypdr.mongodb.net/";
+app.use("/", userRouter);
 
-const client = new MongoClient(url);
+app.use("/", todoRouter);
 
-async function connectToDb() {
+const connectDb = async () => {
   try {
+    const client = new MongoClient(process.env.MONGO_URI!);
     await client.connect();
-    console.log("Connected to MongoDB");
+    db = client.db("test");
+    console.log("Database connected");
+    return client;
   } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
-    process.exit(1);
+    return error;
   }
-}
+};
 
-function getDb() {
-  //db gees awah
-  return client.db("sample_mflix");
-}
+app.get("/", async (req: Request, res: Response) => {
 
-app.get("/", async (req, res) => {
-  const response = db.collection("sessions").find();
-  const users = await response.toArray();
+  const responses = db.collection("users").find();
+
+
+  const users = await responses.toArray();
+
   res.json(users);
 });
-app.post("/addUser", async (req, res) => {
+
+app.post("/addUser", async (req: Request, res: Response) => {
   try {
-    const client = new MongoClient(url);
-    await client.connect();
-    const database = client.db("users");
-    const response = database
+    const response = db
       .collection("users")
-      .insertOne({ name: "tuya", age: 21 });
-    console.log("inserted");
-    console.log((await response).insertedId);
-    res.json();
+      .insertOne({ name: "John Doe", age: 3200 });
+
+    res.json((await response).insertedId);
   } catch (error) {
     console.log(error);
   }
 });
-connectToDb().then(() => {
-  db = getDb();
-  app.listen(3000, () => {
-    console.log(`Server running on port ${3000}`);
-  });
+
+app.listen(port, async () => {
+  await connectDb();
+
+  console.log(`Example app listening on port http://localhost:${port}`);
 });
+
+// yarn add mongodb
